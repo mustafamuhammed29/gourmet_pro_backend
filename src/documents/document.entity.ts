@@ -1,32 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Restaurant } from '../restaurants/restaurant.entity';
 
-// هذا الكلاس يمثل جدول "documents" في قاعدة البيانات
-@Entity('documents')
+@Entity('documents') // <-- تم تحديد اسم الجدول بالجمع
 export class Document {
-    // المفتاح الأساسي، من نوع UUID فريد
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    // علاقة "كثير إلى واحد" مع المطعم
-    // هذا يعني أن المطعم الواحد يمكن أن يكون لديه عدة مستندات
-    @ManyToOne(() => Restaurant, restaurant => restaurant.documents)
+    @Column({
+        type: 'enum',
+        enum: ['license', 'commercial_registry'],
+        comment: 'Type of the document',
+    })
+    type: 'license' | 'commercial_registry';
+
+    @Column()
+    filePath: string;
+
+    @Column({
+        type: 'enum',
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending',
+    })
+    status: 'pending' | 'approved' | 'rejected';
+
+    // --- Relationships ---
+
+    // كل مستند ينتمي إلى مطعم واحد
+    @ManyToOne(() => Restaurant, (restaurant) => restaurant.documents)
     restaurant: Restaurant;
-
-    // نوع المستند المرفوع (مثال: 'license', 'commercial_registry')
-    @Column()
-    documentType: string;
-
-    // رابط الملف المخزن على خدمة التخزين السحابي (مثل S3)
-    @Column()
-    fileUrl: string;
-
-    // حالة المستند (قيد المراجعة، مقبول، مرفوض)
-    @Column({ default: 'pending' })
-    status: string;
-
-    // تاريخ الإنشاء، يتم إضافته تلقائياً
-    @CreateDateColumn()
-    createdAt: Date;
 }
 

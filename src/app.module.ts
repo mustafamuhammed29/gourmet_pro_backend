@@ -32,4 +32,3 @@ import { ChatModule } from './chat/chat.module'; // ١. استيراد وحدة 
   providers: [AppService],
 })
 export class AppModule { }
-

@@ -1,4 +1,11 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+    Controller,
+    Post,
+    Body,
+    UploadedFiles,
+    UseInterceptors,
+} from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -8,13 +15,22 @@ export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
     @Post('register')
-    register(@Body() registerDto: RegisterDto) {
-        return this.authService.register(registerDto);
+    @UseInterceptors(
+        FileFieldsInterceptor([
+            { name: 'licenseFile', maxCount: 1 },
+            { name: 'registryFile', maxCount: 1 },
+        ]),
+    )
+    async register(
+        @UploadedFiles()
+        files: { licenseFile?: Express.Multer.File[]; registryFile?: Express.Multer.File[] },
+        @Body() registerDto: RegisterDto,
+    ) {
+        return this.authService.register(registerDto, files);
     }
 
     @Post('login')
-    login(@Body() loginDto: LoginDto) {
+    async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto);
     }
 }
-

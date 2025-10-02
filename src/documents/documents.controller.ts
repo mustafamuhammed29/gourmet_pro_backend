@@ -1,55 +1,56 @@
 import {
-    Controller,
-    Post,
-    UploadedFiles,
-    UseGuards,
-    UseInterceptors,
-    Req,
-    UnauthorizedException,
-    BadRequestException, // ١. تم استيراد أداة لإرسال أخطاء الطلبات السيئة
+  Controller,
+  Post,
+  UploadedFiles,
+  UseInterceptors,
+  UseGuards,
+  Req,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import type { Request } from 'express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
-@Controller('restaurants/me/documents')
+@Controller('documents')
+@UseGuards(JwtAuthGuard) //  ١. تأمين جميع مسارات هذه الوحدة
 export class DocumentsController {
-    constructor(private readonly documentsService: DocumentsService) { }
+  constructor(private readonly documentsService: DocumentsService) {}
 
-    @Post()
-    @UseGuards(JwtAuthGuard)
-    @UseInterceptors(
-        FileFieldsInterceptor([
-            { name: 'license', maxCount: 1 },
-            { name: 'commercial_registry', maxCount: 1 },
-        ]),
+  @Post('upload')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FilesInterceptor('files', 2, { // قبول ملفين بحد أقصى
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+          callback(null, filename);
+        },
+      }),
+    }),
+  )
+  async uploadDocuments(
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 5 }), // 5MB
+          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|pdf)' }),
+        ],
+      }),
     )
-    async uploadKybDocuments(
-        @UploadedFiles() files: { license?: Express.Multer.File[], commercial_registry?: Express.Multer.File[] },
-        @Req() req: Request,
-    ) {
-        if (!req.user) {
-            throw new UnauthorizedException();
-        }
-
-        const user = req.user;
-        console.log('Request received from authenticated user:', user);
-
-        const licenseFile = files.license?.[0];
-        const commercialRegistryFile = files.commercial_registry?.[0];
-
-        // ٢. تمت إضافة هذا التحقق للتأكد من وجود الملفات
-        if (!licenseFile || !commercialRegistryFile) {
-            throw new BadRequestException('الرجاء التأكد من رفع جميع المستندات المطلوبة.');
-        }
-
-        // ٣. الآن TypeScript متأكد من أن الملفات موجودة
-        return this.documentsService.uploadKybDocuments(
-            user.userId,
-            licenseFile,
-            commercialRegistryFile,
-        );
-    }
+    files: Array<Express.Multer.File>,
+    @Req() req,
+  ) {
+    const userId = req.user.sub; //  ٢. الحصول على هوية المستخدم من بطاقة الدخول
+    return this.documentsService.handleUpload(userId, files);
+  }
 }
-

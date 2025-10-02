@@ -6,6 +6,7 @@ import { User } from './user.entity';
 // هذا الكلاس هو المسؤول الوحيد عن التحدث مباشرة مع جدول "users"
 @Injectable()
 export class UsersService {
+    [x: string]: any;
     constructor(
         // حقن مستودع TypeORM الخاص بكيان User
         @InjectRepository(User)

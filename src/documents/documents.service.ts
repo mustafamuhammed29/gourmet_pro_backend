@@ -1,59 +1,57 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Document } from './document.entity';
-import { Restaurant } from '../restaurants/restaurant.entity'; // استيراد كيان المطعم
+import { Restaurant } from '../restaurants/restaurant.entity';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class DocumentsService {
-    constructor(
-        // حقن مستودع المستندات للتحدث مع قاعدة البيانات
-        @InjectRepository(Document)
-        private documentsRepository: Repository<Document>,
-        // حقن مستودع المطاعم للعثور على المطعم الصحيح
-        @InjectRepository(Restaurant)
-        private restaurantsRepository: Repository<Restaurant>,
-    ) { }
+  constructor(
+    @InjectRepository(Document)
+    private documentsRepository: Repository<Document>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+  ) { }
 
-    async uploadKybDocuments(
-        userId: string, // سنستخدم هذا للعثور على المطعم
-        licenseFile: Express.Multer.File,
-        commercialRegistryFile: Express.Multer.File,
-    ) {
-        // ١. العثور على المطعم المرتبط بالمستخدم
-        // ملاحظة: هذه العلاقة تحتاج إلى إعداد صحيح في كيان User
-        const restaurant = await this.restaurantsRepository.findOne({ where: { owner: { id: userId } } });
+  // --- ✨ تم تصحيح اسم الدالة وتحسينها ---
+  async handleUpload(userId: string, files: Array<Express.Multer.File>) {
+    // ١. البحث عن المستخدم للعثور على مطعمه
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['restaurant'],
+    });
 
-        if (!restaurant) {
-            throw new BadRequestException('لم يتم العثور على المطعم المرتبط بهذا المستخدم.');
-        }
-
-        // ٢. إنشاء وحفظ سجل مستند الرخصة في قاعدة البيانات
-        const licenseDoc = this.documentsRepository.create({
-            restaurant: restaurant,
-            documentType: 'license',
-            fileUrl: licenseFile.path, // ٣. حفظ مسار الملف الفعلي
-            status: 'pending',
-        });
-        await this.documentsRepository.save(licenseDoc);
-
-        // ٤. إنشاء وحفظ سجل مستند السجل التجاري
-        const registryDoc = this.documentsRepository.create({
-            restaurant: restaurant,
-            documentType: 'commercial_registry',
-            fileUrl: commercialRegistryFile.path,
-            status: 'pending',
-        });
-        await this.documentsRepository.save(registryDoc);
-
-
-        return {
-            message: 'تم رفع المستندات بنجاح وهي الآن قيد المراجعة.',
-            files: [
-                { document_type: 'license', path: licenseFile.path },
-                { document_type: 'commercial_registry', path: commercialRegistryFile.path },
-            ],
-        };
+    if (!user || !user.restaurant) {
+      throw new NotFoundException('لم يتم العثور على المطعم المرتبط بهذا الحساب.');
     }
+
+    // ٢. استدعاء الدالة الداخلية لحفظ الملفات
+    return this.saveUploadedDocuments(user.restaurant, files);
+  }
+
+  // هذه الدالة الداخلية يمكن إعادة استخدامها في أماكن أخرى (مثل عملية التسجيل)
+  async saveUploadedDocuments(
+    restaurant: Restaurant,
+    files: Array<Express.Multer.File>,
+  ) {
+    const documentPromises = files.map((file) => {
+      // منطق ذكي لتحديد نوع المستند من اسمه
+      const documentType = file.originalname.toLowerCase().includes('license')
+        ? 'license'
+        : 'commercial_registry';
+
+      const newDocument = this.documentsRepository.create({
+        filePath: file.path,
+        type: documentType,
+        restaurant: restaurant,
+      });
+      return this.documentsRepository.save(newDocument);
+    });
+
+    await Promise.all(documentPromises);
+
+    return { message: 'تم رفع المستندات بنجاح!' };
+  }
 }
 
