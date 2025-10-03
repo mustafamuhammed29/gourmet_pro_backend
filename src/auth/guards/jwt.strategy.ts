@@ -1,23 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { jwtConstants } from '../constants';
 
-// هذا الملف يحتوي على المنطق الفعلي للتحقق من صحة "بطاقة الهوية الرقمية"
+// This file contains the actual logic for validating the "digital ID card" (JWT)
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor() {
         super({
-            // ١. تحديد كيفية استخراج البطاقة من الطلب (من ترويسة Authorization)
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            ignoreExpiration: false, // ٢. التأكد من أن البطاقة لم تنته صلاحيتها
-            // ٣. استخدام نفس المفتاح السري الذي استخدمناه لإنشاء البطاقة
-            secretOrKey: 'YOUR_SUPER_SECRET_KEY_GOES_HERE',
+            ignoreExpiration: false,
+            secretOrKey: jwtConstants.secret,
         });
     }
 
-    // ٤. بعد التحقق من صحة البطاقة، هذه الدالة تقوم باستخراج محتواها
+    // After validating the token, this function extracts its content
     async validate(payload: any) {
-        // ٥. يمكننا الآن إرجاع بيانات المستخدم لتكون متاحة في أي جزء من التطبيق
-        return { userId: payload.sub, email: payload.email };
+        // We can now return the user data to be available anywhere in the app
+        // Added Number() to ensure type safety
+        return {
+            userId: Number(payload.sub),
+            email: payload.email,
+            role: payload.role,
+        };
     }
 }
+

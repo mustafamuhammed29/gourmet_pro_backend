@@ -2,43 +2,41 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Document } from './document.entity';
-import { User } from '../users/user.entity';
+import { Restaurant } from '../restaurants/restaurant.entity'; // <-- ١. استيراد كيان المطعم
 
 @Injectable()
 export class DocumentsService {
   constructor(
     @InjectRepository(Document)
     private documentsRepository: Repository<Document>,
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
-  ) { }
+    @InjectRepository(Restaurant) // <-- ٢. حقن مستودع المطاعم
+    private restaurantsRepository: Repository<Restaurant>,
+  ) {}
 
+  // --- ✨ ٣. تم تعديل الدالة لتصبح أكثر تخصصاً ---
   async assignDocumentsToRestaurant(
-    userId: number,
+    restaurantId: number,
     licensePath: string,
     commercialRegistryPath: string,
   ) {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      relations: ['restaurant'],
+    const restaurant = await this.restaurantsRepository.findOneBy({
+      id: restaurantId,
     });
 
-    if (!user || !user.restaurant) {
-      throw new NotFoundException(
-        `User with ID ${userId} or their restaurant not found.`,
-      );
+    if (!restaurant) {
+      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found.`);
     }
 
     const licenseDoc = this.documentsRepository.create({
       type: 'license',
       path: licensePath,
-      restaurant: user.restaurant,
+      restaurant: restaurant,
     });
 
     const registryDoc = this.documentsRepository.create({
       type: 'commercial_registry',
       path: commercialRegistryPath,
-      restaurant: user.restaurant,
+      restaurant: restaurant,
     });
 
     await this.documentsRepository.save([licenseDoc, registryDoc]);
@@ -46,4 +44,3 @@ export class DocumentsService {
     return { message: 'Documents assigned successfully' };
   }
 }
-

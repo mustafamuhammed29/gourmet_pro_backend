@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common'; // <-- ١. استيراد NotFoundException
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { RegisterDto } from 'src/auth/dto/register.dto';
+import { Restaurant } from '../restaurants/restaurant.entity';
 
 @Injectable()
 export class UsersService {
@@ -15,7 +15,6 @@ export class UsersService {
         return this.usersRepository.find();
     }
 
-    // تم تعديل findOne ليستخدم createQueryBuilder لضمان التوافق مع UUID
     findOne(id: string): Promise<User | null> {
         return this.usersRepository
             .createQueryBuilder('user')
@@ -27,30 +26,34 @@ export class UsersService {
         return this.usersRepository.findOneBy({ email });
     }
 
-    // Find a user by email and explicitly include the passwordHash
     async findOneByEmailWithPassword(email: string): Promise<User | null> {
         return this.usersRepository
             .createQueryBuilder('user')
             .where('user.email = :email', { email })
-            .addSelect('user.passwordHash') // Explicitly select the hidden column
+            .addSelect('user.passwordHash')
             .getOne();
     }
 
-    // تم تعديل create لتكون أكثر وضوحًا وتتجنب أخطاء النوع
-    async create(
-        registerDto: RegisterDto & { password?: string },
-    ): Promise<User> {
-        const newUser = new User();
-        newUser.fullName = registerDto.fullName;
-        newUser.email = registerDto.email;
-        newUser.password = registerDto.password;
-        newUser.phoneNumber = registerDto.phoneNumber;
-
+    async create(userData: Partial<User>): Promise<User> {
+        const newUser = this.usersRepository.create(userData);
         return this.usersRepository.save(newUser);
+    }
+
+    // --- ✨ تم إصلاح الدالة هنا ---
+    async updateUserRestaurant(userId: number, restaurant: Restaurant): Promise<User> {
+        const user = await this.usersRepository.findOneBy({ id: userId });
+
+        // ٢. التحقق مما إذا كان المستخدم موجوداً
+        if (!user) {
+            // ٣. إطلاق استثناء إذا لم يكن موجوداً
+            throw new NotFoundException(`User with ID ${userId} not found.`);
+        }
+
+        user.restaurant = restaurant;
+        return this.usersRepository.save(user);
     }
 
     async remove(id: string): Promise<void> {
         await this.usersRepository.delete(id);
     }
 }
-

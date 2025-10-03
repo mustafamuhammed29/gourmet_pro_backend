@@ -4,21 +4,22 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { User, UserStatus } from '../users/user.entity';
 import { RegisterDto } from './dto/register.dto';
+import { RestaurantsService } from '../restaurants/restaurants.service';
+import { DocumentsService } from '../documents/documents.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
+        private restaurantsService: RestaurantsService,
+        private documentsService: DocumentsService,
     ) { }
 
     async validateUser(email: string, pass: string): Promise<any> {
         const user = await this.usersService.findOneByEmail(email);
-        //
-        // --
         if (user && user.password && (await bcrypt.compare(pass, user.password))) {
-            // -- تم التعديل هنا --
-            //
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...result } = user;
             return result;
         }
@@ -48,13 +49,26 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
         const newUser = await this.usersService.create({
-            ...registerDto,
+            fullName: registerDto.fullName,
+            email: registerDto.email,
             password: hashedPassword,
+            phoneNumber: registerDto.phoneNumber,
         });
 
-        // لاحقًا، سنقوم بربط المستندات بالمطعم المرتبط بهذا المستخدم
-        console.log('License Path:', licensePath);
-        console.log('Commercial Registry Path:', commercialRegistryPath);
+        const newRestaurant = await this.restaurantsService.create({
+            name: registerDto.restaurantName,
+            address: registerDto.address,
+            cuisineType: registerDto.cuisineType,
+            owner: newUser,
+        });
+
+        await this.usersService.updateUserRestaurant(newUser.id, newRestaurant);
+
+        await this.documentsService.assignDocumentsToRestaurant(
+            newRestaurant.id,
+            licensePath,
+            commercialRegistryPath,
+        );
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { password, ...result } = newUser;

@@ -7,7 +7,8 @@ import { UsersModule } from './users/users.module';
 import { RestaurantsModule } from './restaurants/restaurants.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ProductsModule } from './products/products.module';
-import { ChatModule } from './chat/chat.module'; // ١. استيراد وحدة الدردشة
+import { ChatModule } from './chat/chat.module';
+import { AiModule } from './ai/ai.module'; // ✨ ١. استيراد وحدة الذكاء الاصطناعي
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { ChatModule } from './chat/chat.module'; // ١. استيراد وحدة 
     RestaurantsModule,
     DocumentsModule,
     ProductsModule,
-    ChatModule, // ٢. تسجيل وحدة الدردشة في التطبيق الرئيسي
+    ChatModule,
+    AiModule, // ✨ ٢. تسجيل الوحدة في التطبيق
   ],
   controllers: [AppController],
   providers: [AppService],

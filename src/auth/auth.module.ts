@@ -5,18 +5,43 @@ import { UsersModule } from '../users/users.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './guards/jwt.strategy';
-import { LocalStrategy } from './guards/local.strategy'; // <-- ١. إضافة الاستيراد
+import { LocalStrategy } from './guards/local.strategy';
+import { RestaurantsModule } from '../restaurants/restaurants.module';
+import { DocumentsModule } from '../documents/documents.module';
+import { MulterModule } from '@nestjs/platform-express'; // <-- ١. استيراد MulterModule
+import { diskStorage } from 'multer'; // <-- ٢. استيراد diskStorage
+import { extname } from 'path'; // <-- ٣. استيراد extname لمعالجة امتدادات الملفات
 
 @Module({
   imports: [
     UsersModule,
+    RestaurantsModule,
+    DocumentsModule,
     PassportModule,
     JwtModule.register({
-      secret: 'YOUR_SECRET_KEY', // Change this to a secure key in a config file
+      secret: 'gourmetProSecretKey2024',
       signOptions: { expiresIn: '1d' },
     }),
+    // --- ✨ ٤. إضافة تهيئة Multer المتقدمة هنا ---
+    MulterModule.register({
+      storage: diskStorage({
+        // ٤.أ: تحديد المجلد الذي سيتم حفظ الملفات فيه
+        destination: './uploads',
+        // ٤.ب: تحديد كيفية تسمية الملفات بشكل فريد
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          // بناء الاسم النهائي: original-name-timestamp.extension
+          cb(null, `${file.fieldname}-${Date.now()}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+    // ------------------------------------
   ],
-  providers: [AuthService, JwtStrategy, LocalStrategy], // <-- ٢. إضافة الاستراتيجية الجديدة
+  providers: [AuthService, JwtStrategy, LocalStrategy],
   controllers: [AuthController],
 })
 export class AuthModule { }
+
