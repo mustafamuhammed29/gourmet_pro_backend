@@ -7,30 +7,64 @@ import {
     OneToMany,
 } from 'typeorm';
 import { Restaurant } from '../restaurants/restaurant.entity';
+import { ChatThread } from '../chat/chat-thread.entity';
+
+export enum UserRole {
+    ADMIN = 'admin',
+    RESTAURANT_OWNER = 'restaurant_owner',
+    STAFF = 'staff',
+}
+
+export enum UserStatus {
+    PENDING = 'pending',
+    APPROVED = 'approved',
+    REJECTED = 'rejected',
+}
 
 @Entity('users')
 export class User {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+    @PrimaryGeneratedColumn()
+    id: number;
 
-    @Column() // <-- تم إضافة هذا الحقل
+    @Column()
     fullName: string;
 
     @Column({ unique: true })
     email: string;
 
-    @Column({ nullable: true })
-    passwordHash?: string;
+    @Column()
+    password?: string;
 
-    @Column({ default: 'owner' })
-    role: string;
+    @Column()
+    phoneNumber: string;
 
-    // --- Relationships ---
+    @Column({
+        type: 'enum',
+        enum: UserRole,
+        default: UserRole.RESTAURANT_OWNER,
+    })
+    role: UserRole;
 
-    @OneToOne(() => Restaurant, (restaurant) => restaurant.owner)
+    @Column({
+        type: 'enum',
+        enum: UserStatus,
+        default: UserStatus.PENDING,
+    })
+    status: UserStatus;
+
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    createdAt: Date;
+
+    //
+    // --- تم التعديل هنا ---
+    // A user can exist without a restaurant initially.
+    @OneToOne(() => Restaurant, (restaurant) => restaurant.owner, { nullable: true })
     @JoinColumn()
     restaurant: Restaurant;
+    //
+    //
 
-
+    @OneToMany(() => ChatThread, (thread) => thread.user)
+    chatThreads: ChatThread[];
 }
 

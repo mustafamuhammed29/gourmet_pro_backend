@@ -1,26 +1,22 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { JwtModule } from '@nestjs/jwt'; // ١. استيراد وحدة JWT
 import { UsersModule } from '../users/users.module';
-import { RestaurantsModule } from '../restaurants/restaurants.module';
 import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './guards/jwt.strategy';
+import { LocalStrategy } from './guards/local.strategy'; // <-- ١. إضافة الاستيراد
 
 @Module({
-  // ٢. إضافة JwtModule إلى قائمة imports
   imports: [
     UsersModule,
-    RestaurantsModule,
     PassportModule,
     JwtModule.register({
-      global: true, // لجعل الوحدة متاحة في كل التطبيق
-      secret: 'YOUR_SUPER_SECRET_KEY_GOES_HERE', // ٣. المفتاح السري
-      signOptions: { expiresIn: '1d' }, // ٤. مدة صلاحية البطاقة (يوم واحد)
+      secret: 'YOUR_SECRET_KEY', // Change this to a secure key in a config file
+      signOptions: { expiresIn: '1d' },
     }),
   ],
+  providers: [AuthService, JwtStrategy, LocalStrategy], // <-- ٢. إضافة الاستراتيجية الجديدة
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
 })
 export class AuthModule { }
-

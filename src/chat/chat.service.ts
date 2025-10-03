@@ -1,49 +1,49 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ChatThread } from './chat-thread.entity';
 import { ChatMessage } from './chat-message.entity';
 import { User } from '../users/user.entity';
-import { ChatThread } from './chat-thread.entity';
 
 @Injectable()
 export class ChatService {
     constructor(
-        @InjectRepository(ChatMessage)
-        private messagesRepository: Repository<ChatMessage>,
         @InjectRepository(ChatThread)
         private threadsRepository: Repository<ChatThread>,
+        @InjectRepository(ChatMessage)
+        private messagesRepository: Repository<ChatMessage>,
         @InjectRepository(User)
         private usersRepository: Repository<User>,
     ) { }
 
-    /**
-     * دالة لحفظ رسالة جديدة في قاعدة البيانات
-     * @param content نص الرسالة
-     * @param senderId معرف المستخدم الذي أرسل الرسالة
-     * @param threadId معرف المحادثة التي تنتمي إليها الرسالة
-     * @returns الرسالة المحفوظة
-     */
-    async createMessage(content: string, senderId: string, threadId: string): Promise<ChatMessage> {
-        // ١. البحث عن المرسل والمحادثة الصحيحة في قاعدة البيانات
-        const sender = await this.usersRepository.findOneBy({ id: senderId });
-        if (!sender) {
-            throw new NotFoundException(`لم يتم العثور على المستخدم بالمعرف ${senderId}`);
-        }
+    async createMessage(
+        content: string,
+        senderId: string,
+        threadId: string,
+    ): Promise<ChatMessage> {
+        const sender = await this.usersRepository.findOneBy({
+            id: parseInt(senderId, 10),
+        });
+        if (!sender) throw new Error('Sender not found');
 
-        const thread = await this.threadsRepository.findOneBy({ id: threadId });
-        if (!thread) {
-            throw new NotFoundException(`لم يتم العثور على محادثة بالمعرف ${threadId}`);
-        }
+        const thread = await this.threadsRepository.findOneBy({
+            id: parseInt(threadId, 10),
+        });
+        if (!thread) throw new Error('Thread not found');
 
-        // ٢. إنشاء كائن الرسالة الجديد وربطه بالمرسل والمحادثة
-        const newMessage = this.messagesRepository.create({
+        const message = this.messagesRepository.create({
             content,
             sender,
             thread,
         });
 
-        // ٣. حفظ الرسالة الجديدة في قاعدة البيانات
-        return this.messagesRepository.save(newMessage);
+        return this.messagesRepository.save(message);
+    }
+
+    async getMessagesForThread(threadId: number): Promise<ChatMessage[]> {
+        return this.messagesRepository.find({
+            where: { thread: { id: threadId } },
+            relations: ['sender'],
+        });
     }
 }
-

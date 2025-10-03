@@ -1,26 +1,26 @@
-import { Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, OneToMany } from 'typeorm';
-import { Restaurant } from '../restaurants/restaurant.entity';
+import {
+    Entity,
+    PrimaryGeneratedColumn,
+    ManyToOne,
+    OneToMany,
+    CreateDateColumn,
+} from 'typeorm';
 import { User } from '../users/user.entity';
 import { ChatMessage } from './chat-message.entity';
 
-// هذا الكلاس يمثل جدول "chat_threads" الذي ينظم المحادثات
-@Entity('chat_threads')
+@Entity()
 export class ChatThread {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
-
-    // كل محادثة ترتبط بمطعم واحد
-    @ManyToOne(() => Restaurant)
-    restaurant: Restaurant;
-
-    // كل محادثة ترتبط بأدمن واحد (من جدول المستخدمين)
-    @ManyToOne(() => User)
-    admin: User;
-
-    // كل محادثة تحتوي على قائمة من الرسائل
-    @OneToMany(() => ChatMessage, message => message.thread)
-    messages: ChatMessage[];
+    @PrimaryGeneratedColumn()
+    id: number;
 
     @CreateDateColumn()
     createdAt: Date;
+
+    // [الإصلاح الرئيسي] إضافة العلاقة مع المستخدم
+    // هذا السطر يخبر المحادثة أنها تنتمي إلى مستخدم واحد
+    @ManyToOne(() => User, (user) => user.chatThreads)
+    user: User;
+
+    @OneToMany(() => ChatMessage, (message) => message.thread)
+    messages: ChatMessage[];
 }

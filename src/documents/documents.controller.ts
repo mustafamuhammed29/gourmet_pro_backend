@@ -2,55 +2,47 @@ import {
   Controller,
   Post,
   UploadedFiles,
-  UseInterceptors,
   UseGuards,
+  UseInterceptors,
   Req,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
-  HttpCode,
-  HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 
 @Controller('documents')
-@UseGuards(JwtAuthGuard) //  ١. تأمين جميع مسارات هذه الوحدة
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(private readonly documentsService: DocumentsService) { }
 
-  @Post('upload')
-  @HttpCode(HttpStatus.OK)
+  @Post('upload-registration')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    FilesInterceptor('files', 2, { // قبول ملفين بحد أقصى
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
-          callback(null, filename);
-        },
-      }),
-    }),
+    FileFieldsInterceptor([
+      { name: 'licenseFile', maxCount: 1 },
+      { name: 'registryFile', maxCount: 1 },
+    ]),
   )
-  async uploadDocuments(
-    @UploadedFiles(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 5 }), // 5MB
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|pdf)' }),
-        ],
-      }),
-    )
-    files: Array<Express.Multer.File>,
+  async uploadRegistrationFiles(
     @Req() req,
+    @UploadedFiles()
+    files: {
+      licenseFile?: Express.Multer.File[];
+      registryFile?: Express.Multer.File[];
+    },
   ) {
-    const userId = req.user.sub; //  ٢. الحصول على هوية المستخدم من بطاقة الدخول
-    return this.documentsService.handleUpload(userId, files);
+    const userId = req.user.userId;
+    const licenseFile = files.licenseFile?.[0];
+    const registryFile = files.registryFile?.[0];
+
+    if (!licenseFile || !registryFile) {
+      throw new BadRequestException('Both license and registry files are required.');
+    }
+
+    return this.documentsService.assignDocumentsToRestaurant(
+      userId,
+      licenseFile.path,
+      registryFile.path,
+    );
   }
 }

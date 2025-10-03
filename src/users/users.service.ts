@@ -2,27 +2,55 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { RegisterDto } from 'src/auth/dto/register.dto';
 
-// هذا الكلاس هو المسؤول الوحيد عن التحدث مباشرة مع جدول "users"
 @Injectable()
 export class UsersService {
-    [x: string]: any;
     constructor(
-        // حقن مستودع TypeORM الخاص بكيان User
         @InjectRepository(User)
         private usersRepository: Repository<User>,
     ) { }
 
-    // دالة للبحث عن مستخدم عن طريق البريد الإلكتروني
-    // تم تعديل نوع الإرجاع ليقبل "null" وهو ما يتوافق مع TypeORM
-    async findOneByEmail(email: string): Promise<User | null> {
-        return this.usersRepository.findOne({ where: { email } });
+    findAll(): Promise<User[]> {
+        return this.usersRepository.find();
     }
 
-    // دالة لإنشاء مستخدم جديد في قاعدة البيانات
-    async create(userData: Partial<User>): Promise<User> {
-        const newUser = this.usersRepository.create(userData);
+    // تم تعديل findOne ليستخدم createQueryBuilder لضمان التوافق مع UUID
+    findOne(id: string): Promise<User | null> {
+        return this.usersRepository
+            .createQueryBuilder('user')
+            .where('user.id = :id', { id })
+            .getOne();
+    }
+
+    findOneByEmail(email: string): Promise<User | null> {
+        return this.usersRepository.findOneBy({ email });
+    }
+
+    // Find a user by email and explicitly include the passwordHash
+    async findOneByEmailWithPassword(email: string): Promise<User | null> {
+        return this.usersRepository
+            .createQueryBuilder('user')
+            .where('user.email = :email', { email })
+            .addSelect('user.passwordHash') // Explicitly select the hidden column
+            .getOne();
+    }
+
+    // تم تعديل create لتكون أكثر وضوحًا وتتجنب أخطاء النوع
+    async create(
+        registerDto: RegisterDto & { password?: string },
+    ): Promise<User> {
+        const newUser = new User();
+        newUser.fullName = registerDto.fullName;
+        newUser.email = registerDto.email;
+        newUser.password = registerDto.password;
+        newUser.phoneNumber = registerDto.phoneNumber;
+
         return this.usersRepository.save(newUser);
+    }
+
+    async remove(id: string): Promise<void> {
+        await this.usersRepository.delete(id);
     }
 }
 

@@ -1,16 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import {
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    ManyToOne,
+    JoinColumn,
+} from 'typeorm';
 import { Restaurant } from '../restaurants/restaurant.entity';
 
-// هذا الكلاس يمثل جدول "products" في قاعدة البيانات
-@Entity('products')
+@Entity()
 export class Product {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
-
-    // علاقة "كثير إلى واحد" مع المطعم
-    // هذا يعني أن المطعم الواحد يمكن أن يكون لديه عدة منتجات
-    @ManyToOne(() => Restaurant, restaurant => restaurant.products)
-    restaurant: Restaurant;
+    @PrimaryGeneratedColumn()
+    id: number;
 
     @Column()
     name: string;
@@ -18,19 +18,17 @@ export class Product {
     @Column('text')
     description: string;
 
-    // سيتم تخزين السعر كأرقام عشرية
-    @Column('decimal', { precision: 10, scale: 2 })
+    @Column('decimal')
     price: number;
 
     @Column()
-    category: string; // e.g., 'Appetizers', 'Main Course'
+    category: string;
 
-    @Column({ nullable: true }) // رابط الصورة يمكن أن يكون فارغاً
+    @Column({ nullable: true })
     imageUrl: string;
 
-    @CreateDateColumn()
-    createdAt: Date;
-
-    @UpdateDateColumn()
-    updatedAt: Date;
+    @ManyToOne(() => Restaurant, (restaurant) => restaurant.products)
+    @JoinColumn({ name: 'restaurantId' })
+    restaurant: Restaurant;
 }
+

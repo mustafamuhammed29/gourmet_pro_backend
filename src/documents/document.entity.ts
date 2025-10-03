@@ -1,32 +1,17 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Restaurant } from '../restaurants/restaurant.entity';
 
-@Entity('documents') // <-- تم تحديد اسم الجدول بالجمع
+@Entity()
 export class Document {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
-
-    @Column({
-        type: 'enum',
-        enum: ['license', 'commercial_registry'],
-        comment: 'Type of the document',
-    })
-    type: 'license' | 'commercial_registry';
+    @PrimaryGeneratedColumn()
+    id: number;
 
     @Column()
-    filePath: string;
+    type: string; // 'license' or 'commercial_registry'
 
-    @Column({
-        type: 'enum',
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending',
-    })
-    status: 'pending' | 'approved' | 'rejected';
+    @Column()
+    path: string;
 
-    // --- Relationships ---
-
-    // كل مستند ينتمي إلى مطعم واحد
     @ManyToOne(() => Restaurant, (restaurant) => restaurant.documents)
     restaurant: Restaurant;
 }
-

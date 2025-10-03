@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './product.entity';
@@ -6,26 +10,25 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Restaurant } from '../restaurants/restaurant.entity';
 
-// هذا الملف يحتوي على المنطق البرمجي الفعلي لإدارة المنتجات
 @Injectable()
 export class ProductsService {
     constructor(
         @InjectRepository(Product)
         private productsRepository: Repository<Product>,
         @InjectRepository(Restaurant)
-        private restaurantsRepository: Repository<Restaurant>,
+        private restaurantRepository: Repository<Restaurant>,
     ) { }
 
-    /**
-     * دالة لإنشاء منتج جديد وربطه بالمطعم الخاص بالمستخدم
-     */
-    async create(createProductDto: CreateProductDto, userId: string): Promise<Product> {
-        const restaurant = await this.restaurantsRepository.findOne({
+    async create(
+        createProductDto: CreateProductDto,
+        userId: number,
+    ): Promise<Product> {
+        const restaurant = await this.restaurantRepository.findOne({
             where: { owner: { id: userId } },
         });
 
         if (!restaurant) {
-            throw new NotFoundException(`لم يتم العثور على مطعم مرتبط بهذا المستخدم.`);
+            throw new NotFoundException('Restaurant not found for the current user.');
         }
 
         const newProduct = this.productsRepository.create({
@@ -36,10 +39,7 @@ export class ProductsService {
         return this.productsRepository.save(newProduct);
     }
 
-    /**
-     * دالة للعثور على جميع المنتجات الخاصة بمطعم معين
-     */
-    async findAllForRestaurant(userId: string): Promise<Product[]> {
+    async findAll(userId: number): Promise<Product[]> {
         return this.productsRepository.find({
             where: {
                 restaurant: {
@@ -48,56 +48,58 @@ export class ProductsService {
                     },
                 },
             },
-            relations: ['restaurant'], // Include restaurant relation if needed elsewhere
         });
     }
 
-    /**
-     * دالة لتعديل منتج موجود
-     * @param id معرف المنتج المراد تعديله
-     * @param updateProductDto البيانات الجديدة
-     * @param userId معرف المستخدم للتأكد من الملكية
-     */
-    async update(id: string, updateProductDto: UpdateProductDto, userId: string): Promise<Product> {
+    async findOne(id: number, userId: number): Promise<Product> {
         const product = await this.productsRepository.findOne({
-            where: { id },
-            relations: ['restaurant', 'restaurant.owner'], // جلب معلومات المطعم والمالك
+            where: { id: id },
+            relations: ['restaurant', 'restaurant.owner'],
         });
-
         if (!product) {
-            throw new NotFoundException(`لم يتم العثور على منتج بالمعرف ${id}`);
+            throw new NotFoundException(`Product with ID ${id} not found`);
         }
-
-        // التحقق من أن المستخدم هو مالك المطعم الذي يتبعه هذا المنتج
         if (product.restaurant.owner.id !== userId) {
-            throw new ForbiddenException('ليس لديك صلاحية لتعديل هذا المنتج.');
+            throw new UnauthorizedException();
         }
-
-        // دمج البيانات الجديدة مع القديمة وحفظها
-        Object.assign(product, updateProductDto);
-        return this.productsRepository.save(product);
+        return product;
     }
 
-    /**
-     * دالة لحذف منتج
-     * @param id معرف المنتج المراد حذفه
-     * @param userId معرف المستخدم للتأكد من الملكية
-     */
-    async remove(id: string, userId: string): Promise<void> {
+    async update(
+        id: number,
+        updateProductDto: UpdateProductDto,
+        userId: number,
+    ): Promise<Product> {
         const product = await this.productsRepository.findOne({
             where: { id },
             relations: ['restaurant', 'restaurant.owner'],
         });
 
         if (!product) {
-            throw new NotFoundException(`لم يتم العثور على منتج بالمعرف ${id}`);
+            throw new NotFoundException(`Product with ID ${id} not found.`);
         }
 
         if (product.restaurant.owner.id !== userId) {
-            throw new ForbiddenException('ليس لديك صلاحية لحذف هذا المنتج.');
+            throw new UnauthorizedException(
+                'You are not authorized to update this product.',
+            );
         }
 
-        await this.productsRepository.remove(product);
+        Object.assign(product, updateProductDto);
+        return this.productsRepository.save(product);
+    }
+
+    async remove(id: number, userId: number): Promise<void> {
+        const product = await this.productsRepository.findOne({
+            where: { id: id },
+            relations: ['restaurant', 'restaurant.owner'],
+        });
+        if (!product) {
+            throw new NotFoundException(`Product with ID ${id} not found`);
+        }
+        if (product.restaurant.owner.id !== userId) {
+            throw new UnauthorizedException();
+        }
+        await this.productsRepository.delete(id);
     }
 }
-

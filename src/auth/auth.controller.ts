@@ -1,18 +1,26 @@
 import {
     Controller,
+    Request,
     Post,
+    UseGuards,
     Body,
     UploadedFiles,
     UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
+import { LocalAuthGuard } from './guards/local-auth.guard';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+    constructor(private authService: AuthService) { }
+
+    @Post('login')
+    @UseGuards(LocalAuthGuard)
+    async login(@Request() req) {
+        return this.authService.login(req.user);
+    }
 
     @Post('register')
     @UseInterceptors(
@@ -22,15 +30,23 @@ export class AuthController {
         ]),
     )
     async register(
-        @UploadedFiles()
-        files: { licenseFile?: Express.Multer.File[]; registryFile?: Express.Multer.File[] },
         @Body() registerDto: RegisterDto,
+        @UploadedFiles()
+        files: {
+            licenseFile?: Express.Multer.File[];
+            registryFile?: Express.Multer.File[];
+        },
     ) {
-        return this.authService.register(registerDto, files);
-    }
-
-    @Post('login')
-    async login(@Body() loginDto: LoginDto) {
-        return this.authService.login(loginDto);
+        //
+        const licensePath = files.licenseFile?.[0]?.path ?? '';
+        const commercialRegistryPath = files.registryFile?.[0]?.path ?? '';
+        // -- تم التعديل هنا --
+        //
+        return this.authService.register(
+            registerDto,
+            licensePath,
+            commercialRegistryPath,
+        );
     }
 }
+

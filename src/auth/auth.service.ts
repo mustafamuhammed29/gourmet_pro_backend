@@ -1,59 +1,64 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import { RestaurantsService } from '../restaurants/restaurants.service';
+import { User, UserStatus } from '../users/user.entity';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
     constructor(
         private usersService: UsersService,
-        private restaurantsService: RestaurantsService,
+        private jwtService: JwtService,
     ) { }
 
-    async register(registerDto: RegisterDto, files?: any) {
-        const existingUser = await this.usersService.findOneByEmail(registerDto.email);
-        if (existingUser) {
-            throw new ConflictException('هذا البريد الإلكتروني مسجل مسبقاً.');
+    async validateUser(email: string, pass: string): Promise<any> {
+        const user = await this.usersService.findOneByEmail(email);
+        //
+        // --
+        if (user && user.password && (await bcrypt.compare(pass, user.password))) {
+            // -- تم التعديل هنا --
+            //
+            const { password, ...result } = user;
+            return result;
         }
-
-        const salt = await bcrypt.genSalt();
-        const hashedPassword = await bcrypt.hash(registerDto.password, salt);
-
-        const user = await this.usersService.create({
-            fullName: registerDto.fullName,
-            email: registerDto.email,
-            passwordHash: hashedPassword,
-        });
-
-        const restaurant = await this.restaurantsService.create({
-            name: registerDto.restaurantName,
-            address: registerDto.address,
-            cuisineType: registerDto.cuisineType,
-            phoneNumber: registerDto.phoneNumber,
-            owner: user,
-            licenseFile: files?.licenseFile?.[0]?.filename,
-            registryFile: files?.registryFile?.[0]?.filename,
-        });
-
-        user.restaurant = restaurant;
-        await this.usersService.save(user);
-
-        const { passwordHash, ...result } = user;
-        return result;
+        return null;
     }
 
-    async login(loginDto: LoginDto) {
-        const user = await this.usersService.findOneByEmail(loginDto.email);
-        if (!user || !user.passwordHash) {
-            throw new Error('Invalid credentials');
+    async login(user: User) {
+        if (user.status === UserStatus.PENDING) {
+            return { status: 'pending' };
         }
-        const isMatch = await bcrypt.compare(loginDto.password, user.passwordHash);
-        if (!isMatch) {
-            throw new Error('Invalid credentials');
+        if (user.status === UserStatus.REJECTED) {
+            return { status: 'rejected' };
         }
 
-        return { message: 'Logged in successfully', email: user.email };
+        const payload = { email: user.email, sub: user.id, role: user.role };
+        return {
+            status: 'approved',
+            access_token: this.jwtService.sign(payload),
+        };
+    }
+
+    async register(
+        registerDto: RegisterDto,
+        licensePath: string,
+        commercialRegistryPath: string,
+    ): Promise<User> {
+        const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+
+        const newUser = await this.usersService.create({
+            ...registerDto,
+            password: hashedPassword,
+        });
+
+        // لاحقًا، سنقوم بربط المستندات بالمطعم المرتبط بهذا المستخدم
+        console.log('License Path:', licensePath);
+        console.log('Commercial Registry Path:', commercialRegistryPath);
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password, ...result } = newUser;
+        return result as User;
     }
 }
+
