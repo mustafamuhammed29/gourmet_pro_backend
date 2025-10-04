@@ -1,40 +1,97 @@
 import {
-  SubscribeMessage,
   WebSocketGateway,
-  OnGatewayInit,
+  SubscribeMessage,
+  MessageBody,
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  ConnectedSocket,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
-import { Socket, Server } from 'socket.io';
+import { Server } from 'socket.io';
 import { ChatService } from './chat.service';
+// ✨ تم التعديل هنا بإضافة 'type'
+import type { AuthenticatedSocket } from './authenticated-socket.adapter';
 
-// --- ✨ التعديل هنا: إضافة مسار الاستماع الصحيح ---
-@WebSocketGateway({ cors: true, namespace: 'chat' })
-export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: Server;
-  private logger: Logger = new Logger('ChatGateway');
+// ١. تحديد مسار واسم الحدث الرئيسي
+const CHAT_EVENT = 'chat';
 
-  constructor(private readonly chatService: ChatService) {}
+@WebSocketGateway({
+  cors: { 
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  namespace: '/chat', // إضافة / في البداية
+  transports: ['websocket', 'polling']
+})
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
 
-  @SubscribeMessage('msgToServer')
-  handleMessage(client: Socket, payload: any): void {
-    // The server broadcasts the received message to all other clients in the 'chat' namespace.
-    this.server.emit('msgToClient', payload, client.id);
+  constructor(private readonly chatService: ChatService) { }
+
+  /**
+   * Handles new client connections.
+   * When a user connects, they are automatically joined to a private room
+   * named after their user ID.
+   */
+  async handleConnection(client: AuthenticatedSocket) {
+    try {
+      if (!client.user || !client.user.userId) {
+        console.log('Unauthorized connection attempt');
+        client.disconnect();
+        return;
+      }
+      
+      const userRoom = `user-${client.user.userId}`;
+      await client.join(userRoom);
+      console.log(`Client connected: ${client.id} and joined room: ${userRoom}`);
+      
+      // إرسال رسالة ترحيب
+      client.emit('connected', { 
+        message: 'Connected to chat successfully',
+        userId: client.user.userId 
+      });
+    } catch (error) {
+      console.error('Error handling connection:', error);
+      client.disconnect();
+    }
   }
 
-  afterInit(server: Server) {
-    this.logger.log('Chat Gateway Initialized on /chat namespace!');
+  /**
+   * Handles client disconnections.
+   */
+  handleDisconnect(client: AuthenticatedSocket) {
+    console.log(`Client disconnected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected from chat: ${client.id}`);
-  }
+  /**
+   * Listens for incoming chat messages from a connected client.
+   */
+  @SubscribeMessage(CHAT_EVENT)
+  async handleMessage(
+    @MessageBody() data: { content: string; threadId: number },
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ): Promise<void> {
+    try {
+      // ٣. استخلاص هوية المستخدم من الاتصال الموثق
+      const senderId = client.user.userId;
+      const userRoom = `user-${senderId}`;
 
-  handleConnection(client: Socket, ...args: any[]) {
-    this.logger.log(`Client connected to chat: ${client.id}`);
+      // ٤. حفظ الرسالة في قاعدة البيانات أولاً
+      const savedMessage = await this.chatService.createMessage(
+        data.content,
+        senderId,
+        data.threadId,
+      );
+
+      // ٥. إرسال الرسالة إلى الغرفة الخاصة بالمستخدم فقط
+      this.server.to(userRoom).emit(CHAT_EVENT, savedMessage);
+    } catch (error) {
+      console.error('Failed to handle message:', error);
+      // Optional: Emit an error event back to the sender
+      client.emit('error', { message: 'Could not send message.' });
+    }
   }
 }
 
