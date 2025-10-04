@@ -2,48 +2,45 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { INestApplicationContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
-import { jwtConstants } from 'src/auth/constants';
-
-export type AuthenticatedSocket = Socket & {
-    user: {
-        userId: number;
-        email: string;
-        role: string;
-    };
-};
+import { User } from '../users/user.entity';
+import { UsersService } from '../users/users.service';
 
 export class AuthenticatedSocketAdapter extends IoAdapter {
-    private readonly jwtService: JwtService;
-
-    constructor(private app: INestApplicationContext) {
+    constructor(private readonly app: INestApplicationContext) {
         super(app);
-        this.jwtService = this.app.get(JwtService);
     }
 
     createIOServer(port: number, options?: any): any {
-        const server: Server = super.createIOServer(port, options);
+        const server: Server = super.createIOServer(port, { ...options, cors: true });
 
-        // Middleware للتحقق من JWT قبل السماح بالاتصال
-        server.use(async (socket: AuthenticatedSocket, next) => {
-            const token =
-                socket.handshake.auth.token ||
-                socket.handshake.headers['authorization']?.split(' ')[1];
+        // --- ✨ التعديل الرئيسي هنا ---
+        // تم نقل منطق الوصول للخدمات إلى داخل الـ Middleware
+        // لضمان أن تكون جميع وحدات NestJS قد تم تحميلها بالكامل
+        const jwtService = this.app.get(JwtService);
+        const usersService = this.app.get(UsersService);
+
+        server.of('chat').use(async (socket: Socket & { user?: User }, next) => {
+            const authHeader = socket.handshake.headers.authorization;
+            const tokenFromAuth = socket.handshake.auth.token;
+            let token = '';
+
+            if (authHeader) {
+                token = authHeader.replace(/^Bearer\s+/, '').replace(/"/g, '');
+            } else if (tokenFromAuth) {
+                token = tokenFromAuth;
+            }
 
             if (!token) {
                 return next(new Error('Authentication error: No token provided.'));
             }
 
             try {
-                const payload = this.jwtService.verify(token, {
-                    secret: jwtConstants.secret,
-                });
-
-                socket.user = {
-                    userId: Number(payload.sub),
-                    email: payload.email,
-                    role: payload.role,
-                };
-
+                const payload = jwtService.verify(token);
+                const user = await usersService.findOne(payload.sub);
+                if (!user) {
+                    return next(new Error('Authentication error: User not found.'));
+                }
+                socket.user = user;
                 next();
             } catch (error) {
                 next(new Error('Authentication error: Invalid token.'));
@@ -53,3 +50,4 @@ export class AuthenticatedSocketAdapter extends IoAdapter {
         return server;
     }
 }
+
