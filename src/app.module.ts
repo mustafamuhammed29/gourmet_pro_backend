@@ -8,17 +8,19 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ProductsModule } from './products/products.module';
 import { ChatModule } from './chat/chat.module';
-import { AiModule } from './ai/ai.module'; // ✨ ١. استيراد وحدة الذكاء الاصطناعي
+import { AiModule } from './ai/ai.module';
+import { CommonModule } from './common/common.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: '',
-      database: 'gourmet_pro_db',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '3306', 10),
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_DATABASE || 'gourmet_pro_db',
       autoLoadEntities: true,
       synchronize: true,
     }),
@@ -28,7 +30,9 @@ import { AiModule } from './ai/ai.module'; // ✨ ١. استيراد وحدة ا
     DocumentsModule,
     ProductsModule,
     ChatModule,
-    AiModule, // ✨ ٢. تسجيل الوحدة في التطبيق
+    AiModule,
+    CommonModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

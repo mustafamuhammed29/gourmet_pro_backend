@@ -1,47 +1,52 @@
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import { INestApplication } from '@nestjs/common';
-import { ServerOptions, Server, Socket } from 'socket.io';
+import { INestApplicationContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Server, Socket } from 'socket.io';
+import { jwtConstants } from 'src/auth/constants';
 
-// Define an interface for our authenticated socket
-export interface AuthenticatedSocket extends Socket {
+export type AuthenticatedSocket = Socket & {
     user: {
         userId: number;
         email: string;
         role: string;
     };
-}
+};
 
 export class AuthenticatedSocketAdapter extends IoAdapter {
     private readonly jwtService: JwtService;
 
-    constructor(private app: INestApplication) {
+    constructor(private app: INestApplicationContext) {
         super(app);
-        // Get the JwtService instance from the app container
         this.jwtService = this.app.get(JwtService);
     }
 
-    createIOServer(port: number, options?: ServerOptions): any {
+    createIOServer(port: number, options?: any): any {
         const server: Server = super.createIOServer(port, options);
 
-        // Add a middleware to authenticate connections
+        // Middleware للتحقق من JWT قبل السماح بالاتصال
         server.use(async (socket: AuthenticatedSocket, next) => {
-            // Extract token from the handshake headers
-            const token = socket.handshake.auth.token;
+            const token =
+                socket.handshake.auth.token ||
+                socket.handshake.headers['authorization']?.split(' ')[1];
 
             if (!token) {
-                return next(new Error('Authentication error: No token provided'));
+                return next(new Error('Authentication error: No token provided.'));
             }
 
             try {
-                const payload = await this.jwtService.verifyAsync(token, {
-                    secret: 'YOUR_SECRET_KEY', // Ensure this matches your auth.module secret
+                const payload = this.jwtService.verify(token, {
+                    secret: jwtConstants.secret,
                 });
-                // Attach user payload to the socket object for future use
-                socket.user = { userId: payload.sub, email: payload.email, role: payload.role };
+
+                socket.user = {
+                    userId: Number(payload.sub),
+                    email: payload.email,
+                    role: payload.role,
+                };
+
                 next();
             } catch (error) {
-                next(new Error('Authentication error: Invalid token'));
+                next(new Error('Authentication error: Invalid token.'));
             }
         });
 

@@ -16,8 +16,13 @@ import type { AuthenticatedSocket } from './authenticated-socket.adapter';
 const CHAT_EVENT = 'chat';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
-  namespace: 'chat', // ٢. استخدام مسار مخصص للدردشة فقط
+  cors: { 
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  namespace: '/chat', // إضافة / في البداية
+  transports: ['websocket', 'polling']
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -31,9 +36,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * named after their user ID.
    */
   async handleConnection(client: AuthenticatedSocket) {
-    const userRoom = `user-${client.user.userId}`;
-    client.join(userRoom);
-    console.log(`Client connected: ${client.id} and joined room: ${userRoom}`);
+    try {
+      if (!client.user || !client.user.userId) {
+        console.log('Unauthorized connection attempt');
+        client.disconnect();
+        return;
+      }
+      
+      const userRoom = `user-${client.user.userId}`;
+      await client.join(userRoom);
+      console.log(`Client connected: ${client.id} and joined room: ${userRoom}`);
+      
+      // إرسال رسالة ترحيب
+      client.emit('connected', { 
+        message: 'Connected to chat successfully',
+        userId: client.user.userId 
+      });
+    } catch (error) {
+      console.error('Error handling connection:', error);
+      client.disconnect();
+    }
   }
 
   /**

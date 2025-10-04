@@ -46,7 +46,7 @@ export class AuthService {
         licensePath: string,
         commercialRegistryPath: string,
     ): Promise<User> {
-        const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+        const hashedPassword = await bcrypt.hash(registerDto.password, 12);
 
         const newUser = await this.usersService.create({
             fullName: registerDto.fullName,

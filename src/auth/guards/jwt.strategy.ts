@@ -3,23 +3,21 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { jwtConstants } from '../constants';
 
-// This file contains the actual logic for validating the "digital ID card" (JWT)
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor() {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: jwtConstants.secret,
+            secretOrKey: jwtConstants.secret, // Use the unified secret key
         });
     }
 
-    // After validating the token, this function extracts its content
+    // After validating the token, this function extracts its content.
     async validate(payload: any) {
-        // We can now return the user data to be available anywhere in the app
-        // Added Number() to ensure type safety
+        // This payload is what will be attached to `req.user`.
         return {
-            userId: Number(payload.sub),
+            userId: Number(payload.sub), // Ensure userId is always a number
             email: payload.email,
             role: payload.role,
         };
