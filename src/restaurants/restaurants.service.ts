@@ -20,6 +20,7 @@ export class RestaurantsService {
   async findOneByOwnerId(ownerId: number): Promise<Restaurant> {
     const restaurant = await this.restaurantsRepository.findOne({
       where: { owner: { id: ownerId } },
+      relations: ['owner'], // ✨ جلب بيانات المالك
     });
     if (!restaurant) {
       throw new NotFoundException(
