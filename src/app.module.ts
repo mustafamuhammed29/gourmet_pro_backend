@@ -8,7 +8,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ProductsModule } from './products/products.module';
 import { ChatModule } from './chat/chat.module';
-import { AiModule } from './ai/ai.module';
+
 import { CommonModule } from './common/common.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ServicesModule } from './services/services.module';
@@ -33,7 +33,7 @@ import { ChefRequestsModule } from './chef-requests/chef-requests.module';
     DocumentsModule,
     ProductsModule,
     ChatModule,
-    AiModule,
+
     CommonModule,
     NotificationsModule,
     ServicesModule,
