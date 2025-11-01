@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentsService } from './documents.service';
+import { DocumentsController } from './documents.controller';
 import { Document } from './document.entity';
 import { MulterModule } from '@nestjs/platform-express';
 import { Restaurant } from '../restaurants/restaurant.entity'; // <-- ١. استيراد كيان المطعم
@@ -12,7 +13,7 @@ import { Restaurant } from '../restaurants/restaurant.entity'; // <-- ١. است
       dest: './uploads',
     }),
   ],
-  controllers: [], // <-- ٣. تم حذف المتحكم من هنا
+  controllers: [DocumentsController],
   providers: [DocumentsService],
   exports: [DocumentsService], // <-- ٤. تصدير الخدمة لتكون قابلة للاستخدام في الوحدات الأخرى
 })

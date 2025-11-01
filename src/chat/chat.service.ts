@@ -37,8 +37,18 @@ export class ChatService {
             await this.threadsRepository.save(thread);
         }
 
-        // ✨ جلب الرسائل المرتبطة بالمحادثة
-        const messages = await this.getMessagesForThread(thread.id);
+        // ✨ جلب الرسائل المرتبطة بالمحادثة بشكل آمن
+        let messages = [];
+        try {
+            messages = await this.messagesRepository.find({
+                where: { thread: { id: thread.id } },
+                relations: ['sender'],
+                order: { createdAt: 'DESC' },
+            });
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+            messages = [];
+        }
 
         // ✨ إرجاع كائن يجمع بين المحادثة والرسائل ومعرف المستخدم
         return {
