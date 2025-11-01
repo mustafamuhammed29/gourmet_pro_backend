@@ -28,4 +28,10 @@ export class RestaurantsController {
     updateMyRestaurant(@Req() req, @Body() body: UpdateRestaurantDto) {
         return this.restaurantsService.update(req.user.userId, body);
     }
+
+    // ✨ مسار جديد لجلب جميع المطاعم المسجلة
+    @Get()
+    getAllRestaurants() {
+        return this.restaurantsService.findAll();
+    }
 }

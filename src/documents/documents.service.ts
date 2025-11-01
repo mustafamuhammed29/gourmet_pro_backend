@@ -43,4 +43,23 @@ export class DocumentsService {
 
     return { message: 'Documents assigned successfully' };
   }
+
+  // --- ✨ دالة جديدة لجلب حالة المستندات للمطعم ---
+  async getDocumentsByRestaurantOwner(userId: number): Promise<Document[]> {
+    return this.documentsRepository.find({
+      where: {
+        restaurant: {
+          owner: {
+            id: userId,
+          },
+        },
+      },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        path: true,
+      },
+    });
+  }
 }

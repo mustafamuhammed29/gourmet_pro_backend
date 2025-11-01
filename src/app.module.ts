@@ -11,6 +11,9 @@ import { ChatModule } from './chat/chat.module';
 import { AiModule } from './ai/ai.module';
 import { CommonModule } from './common/common.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ServicesModule } from './services/services.module';
+import { OrdersModule } from './orders/orders.module';
+import { ChefRequestsModule } from './chef-requests/chef-requests.module';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     AiModule,
     CommonModule,
     NotificationsModule,
+    ServicesModule,
+    OrdersModule,
+    ChefRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

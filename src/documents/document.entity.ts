@@ -12,6 +12,9 @@ export class Document {
     @Column()
     path: string;
 
+    @Column({ default: 'pending' })
+    status: string; // 'pending', 'approved', 'rejected'
+
     @ManyToOne(() => Restaurant, (restaurant) => restaurant.documents)
     restaurant: Restaurant;
 }

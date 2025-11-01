@@ -24,6 +24,21 @@ export class Restaurant {
   @Column({ nullable: true })
   cuisineType: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude: number;
+
+  @Column({ type: 'text', nullable: true })
+  bio: string;
+
+  @Column({ type: 'text', nullable: true })
+  story: string;
+
+  @Column({ nullable: true })
+  logoUrl: string;
+
   @OneToOne(() => User, (user) => user.restaurant)
   @JoinColumn()
   owner: User;

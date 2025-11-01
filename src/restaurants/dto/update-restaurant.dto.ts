@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsNumber } from 'class-validator';
 
 export class UpdateRestaurantDto {
     @IsOptional()
@@ -13,5 +13,23 @@ export class UpdateRestaurantDto {
     @IsString()
     cuisineType?: string;
 
-    // لاحقاً، يمكن إضافة حقول أخرى مثل bio, story, logoUrl
+    @IsOptional()
+    @IsNumber()
+    latitude?: number;
+
+    @IsOptional()
+    @IsNumber()
+    longitude?: number;
+
+    @IsOptional()
+    @IsString()
+    bio?: string;
+
+    @IsOptional()
+    @IsString()
+    story?: string;
+
+    @IsOptional()
+    @IsString()
+    logoUrl?: string;
 }

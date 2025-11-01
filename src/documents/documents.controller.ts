@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   UploadedFiles,
   UseGuards,
@@ -44,5 +45,11 @@ export class DocumentsController {
       licenseFile.path,
       registryFile.path,
     );
+  }
+
+  @Get('my-documents')
+  @UseGuards(JwtAuthGuard)
+  async getMyDocuments(@Req() req) {
+    return this.documentsService.getDocumentsByRestaurantOwner(req.user.userId);
   }
 }

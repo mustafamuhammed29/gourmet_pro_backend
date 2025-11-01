@@ -39,4 +39,25 @@ export class RestaurantsService {
     const updatedRestaurant = Object.assign(restaurant, updateRestaurantDto);
     return this.restaurantsRepository.save(updatedRestaurant);
   }
+
+  // --- ✨ دالة جديدة لجلب جميع المطاعم المسجلة ---
+  async findAll(): Promise<Restaurant[]> {
+    return this.restaurantsRepository.find({
+      relations: ['owner'],
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        cuisineType: true,
+        latitude: true,
+        longitude: true,
+        bio: true,
+        logoUrl: true,
+        owner: {
+          id: true,
+          email: true,
+        },
+      },
+    });
+  }
 }
