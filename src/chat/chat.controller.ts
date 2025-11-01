@@ -9,7 +9,7 @@ export class ChatController {
 
     @UseGuards(JwtAuthGuard)
     @Get('my-thread')
-    async getMyThread(@Req() req): Promise<ChatThread> {
+    async getMyThread(@Req() req): Promise<any> {
         const userId = req.user.userId;
         return this.chatService.findOrCreateThreadForUser(userId);
     }

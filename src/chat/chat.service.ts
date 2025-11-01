@@ -21,7 +21,7 @@ export class ChatService {
      * @param userId The ID of the user.
      * @returns The found or newly created ChatThread.
      */
-    async findOrCreateThreadForUser(userId: number): Promise<ChatThread> {
+    async findOrCreateThreadForUser(userId: number): Promise<any> {
         const user = await this.usersRepository.findOneBy({ id: userId });
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found.`);
@@ -37,7 +37,15 @@ export class ChatService {
             await this.threadsRepository.save(thread);
         }
 
-        return thread;
+        // ✨ جلب الرسائل المرتبطة بالمحادثة
+        const messages = await this.getMessagesForThread(thread.id);
+
+        // ✨ إرجاع كائن يجمع بين المحادثة والرسائل ومعرف المستخدم
+        return {
+            thread: thread,
+            messages: messages,
+            userId: userId,
+        };
     }
 
     /**
