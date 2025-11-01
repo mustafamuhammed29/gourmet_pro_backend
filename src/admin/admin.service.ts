@@ -30,8 +30,16 @@ export class AdminService {
       totalProducts,
     ] = await Promise.all([
       this.restaurantRepository.count(),
-      this.restaurantRepository.count({ where: { owner: { status: 'pending' } } }),
-      this.restaurantRepository.count({ where: { owner: { status: 'approved' } } }),
+      this.restaurantRepository
+        .createQueryBuilder('restaurant')
+        .leftJoin('restaurant.owner', 'owner')
+        .where('owner.status = :status', { status: 'pending' })
+        .getCount(),
+      this.restaurantRepository
+        .createQueryBuilder('restaurant')
+        .leftJoin('restaurant.owner', 'owner')
+        .where('owner.status = :status', { status: 'approved' })
+        .getCount(),
       this.userRepository.count(),
       this.orderRepository.count(),
       this.productRepository.count(),
@@ -255,7 +263,7 @@ export class AdminService {
       .where('order.createdAt BETWEEN :startDate AND :endDate', { startDate, endDate })
       .getMany();
 
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalRevenue = orders.reduce((sum, order) => sum + Number(order.price), 0);
 
     return {
       startDate,
