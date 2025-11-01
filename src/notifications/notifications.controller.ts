@@ -18,6 +18,21 @@ import { NotificationStatus } from './notification.entity';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @Get('my-notifications')
+  async getMyNotifications(
+    @Req() req,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+    @Query('status') status?: NotificationStatus,
+  ) {
+    return this.notificationsService.findAllForUser(
+      req.user.userId,
+      parseInt(page, 10),
+      parseInt(limit, 10),
+      status,
+    );
+  }
+
   @Get()
   async findAll(
     @Req() req,

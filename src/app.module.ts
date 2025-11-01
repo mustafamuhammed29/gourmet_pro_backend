@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ServicesModule } from './services/services.module';
 import { OrdersModule } from './orders/orders.module';
 import { ChefRequestsModule } from './chef-requests/chef-requests.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ChefRequestsModule } from './chef-requests/chef-requests.module';
     ServicesModule,
     OrdersModule,
     ChefRequestsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

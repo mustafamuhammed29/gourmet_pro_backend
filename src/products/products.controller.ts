@@ -23,7 +23,6 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  // ✨ إضافة معترض الملفات لاستقبال صورة عند إنشاء طبق جديد
   @UseInterceptors(FileInterceptor('image'))
   create(
     @Body() createProductDto: CreateProductDto,
@@ -38,6 +37,12 @@ export class ProductsController {
     );
   }
 
+  // ✨ يجب وضع /my-products قبل /:id
+  @Get('my-products')
+  getMyProducts(@Req() req) {
+    return this.productsService.findAll(req.user.userId);
+  }
+
   @Get()
   findAll(@Req() req) {
     return this.productsService.findAll(req.user.userId);
@@ -49,7 +54,6 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  // ✨ إضافة معترض الملفات لاستقبال صورة عند تعديل الطبق
   @UseInterceptors(FileInterceptor('image'))
   update(
     @Param('id') id: string,
