@@ -8,12 +8,15 @@ import { JwtStrategy } from './guards/jwt.strategy';
 import { LocalStrategy } from './guards/local.strategy';
 import { RestaurantsModule } from '../restaurants/restaurants.module';
 import { DocumentsModule } from '../documents/documents.module';
-import { MulterModule } from '@nestjs/platform-express'; // <-- ١. استيراد MulterModule
-import { diskStorage } from 'multer'; // <-- ٢. استيراد diskStorage
-import { extname } from 'path'; // <-- ٣. استيراد extname لمعالجة امتدادات الملفات
+import { MulterModule } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { PasswordReset } from './entities/password-reset.entity';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([PasswordReset]),
     UsersModule,
     RestaurantsModule,
     DocumentsModule,
