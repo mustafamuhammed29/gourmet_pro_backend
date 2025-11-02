@@ -7,11 +7,14 @@ import {
     UploadedFiles,
     UseInterceptors,
     BadRequestException,
+    HttpCode,
+    HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { SimpleRegisterDto } from './dto/simple-register.dto';
+import { RequestPasswordResetDto, VerifyResetCodeDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @Controller('auth')
@@ -61,6 +64,24 @@ export class AuthController {
             '', // Empty license path for testing
             '', // Empty registry path for testing
         );
+    }
+
+    @Post('password-reset/request')
+    @HttpCode(HttpStatus.OK)
+    async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+        return this.authService.requestPasswordReset(dto.email);
+    }
+
+    @Post('password-reset/verify')
+    @HttpCode(HttpStatus.OK)
+    async verifyResetCode(@Body() dto: VerifyResetCodeDto) {
+        return this.authService.verifyResetCode(dto.email, dto.code);
+    }
+
+    @Post('password-reset/reset')
+    @HttpCode(HttpStatus.OK)
+    async resetPassword(@Body() dto: ResetPasswordDto) {
+        return this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
     }
 }
 
