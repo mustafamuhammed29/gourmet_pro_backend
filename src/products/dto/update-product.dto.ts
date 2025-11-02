@@ -1,4 +1,5 @@
 import { IsString, IsNumber, Min, IsOptional, IsNotEmpty } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateProductDto {
     @IsOptional()
@@ -12,6 +13,7 @@ export class UpdateProductDto {
     description?: string;
 
     @IsOptional()
+    @Transform(({ value }) => value ? parseFloat(value) : value)
     @IsNumber({}, { message: 'السعر يجب أن يكون رقماً' })
     @Min(0, { message: 'السعر لا يمكن أن يكون سالباً' })
     price?: number;

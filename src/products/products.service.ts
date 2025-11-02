@@ -51,6 +51,7 @@ export class ProductsService {
                     },
                 },
             },
+            relations: ['restaurant', 'restaurant.owner'],
         });
     }
 
